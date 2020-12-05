@@ -1,17 +1,33 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	r := setupRouter()
 	r.Run()
+
 }
 
-// setupRouter creates the routing of the Books API
+// User struct in order to keep the first name, last name, user and password.
+// user and password are used in order to login, and Firstname and LastName will
+// be used in order to keep logs on the recordings
+type User struct {
+	FirstName string `json:"firstname" bson:"firstname"`
+	LastName  string `json:"lastname" bson:"lastname"`
+	User      string `json:"user" bson:"user"`
+	Password  string `json:"email" bson:"email"`
+}
+
+var client *mongo.Client
+
+// setupRouter creates the routing of the API, using Gin Gonic.
 func setupRouter() *gin.Engine {
 	// gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -21,12 +37,22 @@ func setupRouter() *gin.Engine {
 
 }
 
+// getHash create a hash for the password in order to keep the hash in the
+// database.
+func getHash(password []byte) string {
+	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.MinCost)
+	must(err)
+	return string(hash)
+}
+
+// getHomepage initialize the homepage HTML.
 func getHomepage(c *gin.Context) {
 	c.HTML(http.StatusOK, "homepage.html", nil)
 }
 
+// must catches errors and prints with log.
 func must(err error) {
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }
