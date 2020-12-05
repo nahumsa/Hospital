@@ -1,22 +1,16 @@
 <!-- views/homepage.html -->
-<!doctype html>
-<html>
-    <head>
-        <title>Login</title>
-    </head>
-    <body>
-        <h3>Enter your email and password</h3> 
-        <div id="center">
-            <input type="int" id="num1" placeholder="Number">
-            <br>
-            <input type="int" id="num2" placeholder="Number">
-            <br>
-            <button onclick="location.href='/'+ document.getElementById('operation').value + '/' + document.getElementById('num1').value + '/' + document.getElementById('num2').value" id="connect">Send</button>
-        </div>  
-    </body>
-    <footer>
-        <p>
-            Made by <a href="https://github.com/nahumsa">nahumsa</a>
-        </p>
-    </footer>
-</html>
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<h3>Enter your email and password</h3> 
+<form action="/" method="post">
+    <input type="string" id="login" placeholder="login">
+    <br>
+    <input type="sring" id="password" placeholder="password">
+    <br>
+    <input type="submit" value="Submit">
+</form>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}

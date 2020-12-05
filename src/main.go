@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -45,9 +46,46 @@ func getHash(password []byte) string {
 	return string(hash)
 }
 
+var secretKey = []byte("secrets")
+
+// GenerateJWT generates the JWT string for authentication
+func GenerateJWT() (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	tokenString, err := token.SignedString(secretKey)
+	if err != nil {
+		log.Println("Error in JWT token generation")
+		return "", err
+	}
+
+	return tokenString, nil
+
+}
+
 // getHomepage initialize the homepage HTML.
 func getHomepage(c *gin.Context) {
-	c.HTML(http.StatusOK, "homepage.html", nil)
+	render(c, gin.H{"title": "login"}, "homepage.html")
+}
+
+func postSignUp(c *gin.Context) {
+
+}
+
+// render helper function to render JSON, XML and HTML depending on
+// the request.
+func render(c *gin.Context, data gin.H, templateName string) {
+
+	switch c.Request.Header.Get("Accept") {
+	case "application/json":
+		// Respond with JSON
+		c.JSON(http.StatusOK, data["payload"])
+	case "application/xml":
+		// Respond with XML
+		c.XML(http.StatusOK, data["payload"])
+	default:
+		// Respond with HTML
+		c.HTML(http.StatusOK, templateName, data)
+	}
+
 }
 
 // must catches errors and prints with log.
