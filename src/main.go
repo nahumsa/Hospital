@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -13,7 +14,6 @@ import (
 func main() {
 	r := setupRouter()
 	r.Run()
-
 }
 
 // User struct in order to keep the first name, last name, user and password.
@@ -31,11 +31,36 @@ var client *mongo.Client
 // setupRouter creates the routing of the API, using Gin Gonic.
 func setupRouter() *gin.Engine {
 	// gin.SetMode(gin.ReleaseMode)
-	router := gin.Default()
+	router := gin.New()
 	router.LoadHTMLGlob("views/*")
 	router.GET("/", getHomepage)
-	return router
 
+	// Create login handler
+	store := sessions.NewCookieStore([]byte("secret"))
+	router.Use(sessions.Sessions("mysession", store))
+	router.POST("/login", login)
+	router.GET("/logout", logout)
+
+	// Create private handlers
+	private := router.Group("/private")
+	private.Use(AuthRequired)
+	{
+		private.GET("/user", user)
+	}
+
+	return router
+}
+
+// AuthRequired is a middleware to check the session
+func AuthRequired(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(userkey)
+	if user == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unathorized"})
+		return
+	}
+	// Continue down the chain
+	c.Next()
 }
 
 // getHash create a hash for the password in order to keep the hash in the
