@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/contrib/sessions"
@@ -27,6 +29,7 @@ type User struct {
 }
 
 var client *mongo.Client
+var userKey = "user"
 
 // setupRouter creates the routing of the API, using Gin Gonic.
 func setupRouter() *gin.Engine {
@@ -38,14 +41,14 @@ func setupRouter() *gin.Engine {
 	// Create login handler
 	store := sessions.NewCookieStore([]byte("secret"))
 	router.Use(sessions.Sessions("mysession", store))
-	router.POST("/login", login)
-	router.GET("/logout", logout)
+	router.POST("/login", Login)
+	router.GET("/logout", Logout)
 
 	// Create private handlers
 	private := router.Group("/private")
 	private.Use(AuthRequired)
 	{
-		private.GET("/user", user)
+		private.GET("/user", userGet)
 	}
 
 	return router
@@ -54,13 +57,70 @@ func setupRouter() *gin.Engine {
 // AuthRequired is a middleware to check the session
 func AuthRequired(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(userkey)
+	user := session.Get(userKey)
 	if user == nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unathorized"})
 		return
 	}
 	// Continue down the chain
 	c.Next()
+}
+
+// Login generates a login validation Handler
+func Login(c *gin.Context) {
+	session := sessions.Default(c)
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	fmt.Println(username)
+	fmt.Println(password)
+	// Validate post form
+	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
+		return
+	}
+
+	// Check login credentials
+	// TODO: Use database
+	userID := "1"
+	if username != "user1" || password != "test" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password or login"})
+		return
+	}
+
+	// Save the name in the session
+	session.Set(userKey, userID)
+
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Authentication Successful"})
+}
+
+// Logout generates a handler that logouts current session
+func Logout(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(userKey)
+
+	if user == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
+		return
+	}
+
+	session.Delete(userKey)
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+}
+
+func userGet(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(userKey)
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // getHash create a hash for the password in order to keep the hash in the
