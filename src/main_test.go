@@ -1,46 +1,21 @@
 package main
 
 import (
-	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/appleboy/gofight/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func performRequest(r http.Handler, method, path string, w *httptest.ResponseRecorder) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest(method, path, nil)
-	r.ServeHTTP(w, req)
-	return w
+func init() {
+	gin.SetMode(gin.TestMode)
 }
 
-func TestHomepageStatus(t *testing.T) {
-	// Setup router
-	router := setupRouter()
-	// Parameters of the test
-	wantCode := http.StatusOK
-	method := "GET"
-	url := "/"
-
-	// Test
-	// Perform a GET request with that handler.
-	w := httptest.NewRecorder()
-	w = performRequest(router, method, url, w)
-
-	// Assert we encoded correctly,
-	// the request gives a 200
-	assert.Equal(t, wantCode, w.Code)
-}
-
-func performPost(r http.Handler, method, path string, payload io.Reader) *httptest.ResponseRecorder {
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(method, path, payload)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	r.ServeHTTP(w, req)
-	return w
+func TestHomepage(t *testing.T) {
+	t.Run("HomepageStatus", HomepageStatus)
 }
 
 func TestLogin(t *testing.T) {
@@ -51,108 +26,146 @@ func TestLogin(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	t.Run("LogoutNoUser", LogoutNoUser)
-	// t.Run("LogoutUser", LogoutUser)
+	t.Run("LogoutUser", LogoutUser)
+}
+
+func TestPrivate(t *testing.T) {
+	t.Run("PrivateNoAuth", LogoutNoUser)
+	t.Run("PrivateTestAuth", PrivateTestAuth)
+}
+
+func HomepageStatus(t *testing.T) {
+
+	g := gofight.New()
+	e := setupRouter()
+
+	wantCode := http.StatusOK
+
+	// Test without login
+	g.GET("/").Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, wantCode, r.Code)
+	})
+}
+
+func PrivateTestAuth(t *testing.T) {
+	// Function adapted from https://github.com/Depado/gin-auth-example/blob/master/main_test.go
+	g := gofight.New()
+	e := setupRouter()
+	wantStatus := http.StatusOK
+	wantBody := `{"user":"1"}`
+
+	var cookie string
+	g.POST("/login").
+		SetForm(gofight.H{"username": "user1", "password": "test"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, http.StatusOK, r.Code)
+			cookie = r.HeaderMap.Get("Set-Cookie")
+			// Check if there is a cookie
+			assert.NotZero(t, cookie)
+		})
+
+	g.GET("/private/user").SetHeader(gofight.H{"Cookie": cookie}).Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, wantStatus, r.Code)
+		body, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, wantBody, string(body))
+	})
+}
+
+func PrivateNoAuth(t *testing.T) {
+	g := gofight.New()
+	e := setupRouter()
+
+	wantBody := `{"error":"unathorized"}`
+	wantStatus := http.StatusUnauthorized
+
+	g.GET("/private/user").Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, wantStatus, r.Code)
+		body, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, wantBody, string(body))
+	})
 }
 
 func LoginSuccessful(t *testing.T) {
-	router := setupRouter()
+	g := gofight.New()
+	e := setupRouter()
 
 	wantBody := `{"message":"Authentication Successful"}`
-	wantCode := http.StatusOK
-	method := "POST"
-	url := "/login"
-	payload := strings.NewReader("username=user1&password=test")
+	wantStatus := http.StatusOK
 
-	w := performPost(router, method, url, payload)
-	// Assert we encoded correctly,
-	// the request gives a 200
-	assert.Equal(t, wantCode, w.Code)
-
-	// Check body
-	body, _ := ioutil.ReadAll(w.Body)
-	assert.Equal(t, wantBody, string(body))
+	g.POST("/login").
+		SetForm(gofight.H{"username": "user1", "password": "test"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
 }
 
 func LoginFailed(t *testing.T) {
-	router := setupRouter()
+	g := gofight.New()
+	e := setupRouter()
 
 	wantBody := `{"error":"Invalid password or login"}`
-	wantCode := http.StatusUnauthorized
-	method := "POST"
-	url := "/login"
-	payload := strings.NewReader("username=user2&password=test")
+	wantStatus := http.StatusUnauthorized
 
-	w := performPost(router, method, url, payload)
-
-	// Assert we encoded correctly,
-	// the request gives a 200
-	assert.Equal(t, wantCode, w.Code)
-
-	// Check body
-	body, _ := ioutil.ReadAll(w.Body)
-	assert.Equal(t, wantBody, string(body))
+	g.POST("/login").
+		SetForm(gofight.H{"username": "asae", "password": "wrr"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
 }
 
 func LoginNoForm(t *testing.T) {
-	router := setupRouter()
+	g := gofight.New()
+	e := setupRouter()
 
 	wantBody := `{"error":"Parameters can't be empty"}`
-	wantCode := http.StatusBadRequest
-	method := "POST"
-	url := "/login"
-	payload := strings.NewReader("username=&password=")
-
-	w := performPost(router, method, url, payload)
-
-	// Assert we encoded correctly,
-	// the request gives a 200
-	assert.Equal(t, wantCode, w.Code)
-
-	// Check body
-	body, _ := ioutil.ReadAll(w.Body)
-	assert.Equal(t, wantBody, string(body))
+	wantStatus := http.StatusBadRequest
+	g.POST("/login").
+		SetForm(gofight.H{"username": "", "password": ""}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
 }
 
-// func LogoutUser(t *testing.T) {
-// 	router := setupRouter()
+func LogoutUser(t *testing.T) {
+	// Function adapted from https://github.com/Depado/gin-auth-example/blob/master/main_test.go
+	g := gofight.New()
+	e := setupRouter()
+	wantStatus := http.StatusOK
+	wantBody := `{"message":"Successfully logged out"}`
 
-// 	wantBody := `{"message":"Successfully logged out"}`
-// 	wantCode := http.StatusOK
-// 	method := "GET"
-// 	url := "/logout"
+	var cookie string
+	g.POST("/login").
+		SetForm(gofight.H{"username": "user1", "password": "test"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, http.StatusOK, r.Code)
+			cookie = r.HeaderMap.Get("Set-Cookie")
+			// Check if there is a cookie
+			assert.NotZero(t, cookie)
+		})
 
-// 	// Login first
-// 	payload := strings.NewReader("username=user1&password=test")
-// 	w := performPost(router, "POST", "/login", payload)
-
-// 	cookie := w.HeaderMap.Get("Set-Cookie")
-// 	w = httptest.NewRecorder()
-// 	http.SetCookie(w, &http.Cookie{Name: "mysession", Value: cookie})
-// 	w = performRequest(router, method, url, w)
-
-// 	// Assert we encoded correctly,
-// 	// the request gives a 200
-// 	assert.Equal(t, wantCode, w.Code)
-
-// 	// Check body
-// 	body, _ := ioutil.ReadAll(w.Body)
-// 	assert.Equal(t, wantBody, string(body))
-// }
+	g.GET("/logout").SetHeader(gofight.H{"Cookie": cookie}).Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, wantStatus, r.Code)
+		body, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, wantBody, string(body))
+	})
+}
 
 func LogoutNoUser(t *testing.T) {
-	// Setup router
-	router := setupRouter()
-	// Parameters of the test
-	wantCode := http.StatusBadRequest
-	method := "GET"
-	url := "/logout"
+	g := gofight.New()
+	e := setupRouter()
 
-	// Test
-	// Perform a GET request with that handler.
-	w := httptest.NewRecorder()
-	w = performRequest(router, method, url, w)
+	wantBody := `{"error":"Invalid session token"}`
 
-	// Assert we encoded correctly,
-	// the request gives a 200
-	assert.Equal(t, wantCode, w.Code)
+	// Test without login
+	g.GET("/logout").Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+		assert.Equal(t, http.StatusBadRequest, r.Code)
+		body, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, wantBody, string(body))
+	})
 }
