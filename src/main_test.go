@@ -30,7 +30,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestPrivate(t *testing.T) {
-	t.Run("PrivateNoAuth", LogoutNoUser)
+	t.Run("PrivateNoAuth", PrivateNoAuth)
 	t.Run("PrivateTestAuth", PrivateTestAuth)
 }
 
