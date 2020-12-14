@@ -1,27 +1,69 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
+	// Set up context
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+
 	r := setupRouter()
+	r.POST("/signup", signup)
 	r.Run()
+}
+
+func signup(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	secretkey := c.PostForm("secretkey")
+
+	// Validate secret key (Need to create env variable)
+	if secretkey != "secret" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Secret Key"})
+		return
+	}
+
+	// Validate post form
+	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
+		return
+	}
+
+	// Post to a database
+	user := User{User: username, Password: password}
+
+	collection := client.Database("GODB").Collection("user")
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	result, err := collection.InsertOne(ctx, user)
+
+	if err != nil {
+		// Need to rework error name
+		c.JSON(http.StatusOK, gin.H{"error": "Signup Error"})
+	}
+	log.Println(result)
+	c.JSON(http.StatusOK, gin.H{"message": "Signup Complete"})
+
 }
 
 // User struct in order to keep the first name, last name, user and password.
 // user and password are used in order to login, and Firstname and LastName will
 // be used in order to keep logs on the recordings
 type User struct {
-	FirstName string `json:"firstname" bson:"firstname"`
-	LastName  string `json:"lastname" bson:"lastname"`
-	User      string `json:"user" bson:"user"`
-	Password  string `json:"email" bson:"email"`
+	// FirstName string `json:"firstname" bson:"firstname"`
+	// LastName  string `json:"lastname" bson:"lastname"`
+	User     string `json:"user" bson:"user"`
+	Password string `json:"email" bson:"email"`
 }
 
 var client *mongo.Client
