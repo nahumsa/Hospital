@@ -24,52 +24,6 @@ func main() {
 	r.Run()
 }
 
-func signup(c *gin.Context) {
-	username := c.PostForm("username")
-	password := c.PostForm("password")
-	secretkey := c.PostForm("secretkey")
-
-	// Validate secret key (Need to create env variable)
-	if secretkey != "secret" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Secret Key"})
-		return
-	}
-
-	// Validate post form
-	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
-		return
-	}
-	user := User{Username: username, Password: password}
-
-	user.Password = hashPassword([]byte(user.Password))
-
-	collection := client.Database("loginDB").Collection("user")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// catch if there already exists an user
-	var userDB User
-	err := collection.FindOne(ctx, bson.M{"user": user.Username}).Decode(&userDB)
-	emptyUser := User{}
-	if userDB != emptyUser {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "username already in use"})
-		return
-	}
-
-	// Add the user to the database
-	_, err = collection.InsertOne(ctx, user)
-	if err != nil {
-		// Need to rework error name
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Signup Error"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Signup Complete"})
-
-}
-
 // User struct in order to keep the first name, last name, user and password.
 // user and password are used in order to login, and Firstname and LastName will
 // be used in order to keep logs on the recordings
@@ -104,7 +58,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/login", Login)
 	router.GET("/logout", Logout)
 	// Signup handler
-	router.POST("/signup", signup)
+	router.POST("/signup", Signup)
 
 	// Create private handlers
 	private := router.Group("/private")
@@ -128,6 +82,52 @@ func AuthRequired(c *gin.Context) {
 	c.Next()
 }
 
+// Signup generates a signup handler
+func Signup(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	secretkey := c.PostForm("secretkey")
+
+	// Validate secret key (Need to create env variable)
+	if secretkey != "secret" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Secret Key"})
+		return
+	}
+
+	// Validate post form
+	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
+		return
+	}
+	user := User{Username: username, Password: password}
+
+	collection := client.Database("loginDB").Collection("user")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// catch if there already exists an user
+	var userDB User
+	err := collection.FindOne(ctx, bson.M{"username": user.Username}).Decode(&userDB)
+	emptyUser := User{}
+	if userDB != emptyUser {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username already in use"})
+		return
+	}
+
+	// Add the user to the database
+	user.Password = hashPassword([]byte(user.Password))
+	_, err = collection.InsertOne(ctx, user)
+	if err != nil {
+		// Need to rework error name
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Signup Error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Signup Complete"})
+
+}
+
 // Login generates a login validation Handler
 func Login(c *gin.Context) {
 	session := sessions.Default(c)
@@ -142,14 +142,37 @@ func Login(c *gin.Context) {
 
 	// Check login credentials
 	// TODO: Use database
-	userID := "1"
-	if username != "user1" || password != "test" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password or login"})
+
+	user := User{Username: username, Password: password}
+
+	collection := client.Database("loginDB").Collection("user")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// catch if there already exists an user
+	var userDB User
+	err := collection.FindOne(ctx, bson.M{"username": user.Username}).Decode(&userDB)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		return
+	}
+
+	// Compare passwords
+	userPassword := []byte(user.Password)
+	dbPassword := []byte(userDB.Password)
+
+	passErr := bcrypt.CompareHashAndPassword(dbPassword, userPassword)
+
+	log.Println(passErr)
+
+	if passErr != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 		return
 	}
 
 	// Save the name in the session
-	session.Set(userKey, userID)
+	session.Set(userKey, user.Username)
 
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Session"})
