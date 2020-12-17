@@ -141,8 +141,6 @@ func Login(c *gin.Context) {
 	}
 
 	// Check login credentials
-	// TODO: Use database
-
 	user := User{Username: username, Password: password}
 
 	collection := client.Database("loginDB").Collection("user")
@@ -163,8 +161,6 @@ func Login(c *gin.Context) {
 	dbPassword := []byte(userDB.Password)
 
 	passErr := bcrypt.CompareHashAndPassword(dbPassword, userPassword)
-
-	log.Println(passErr)
 
 	if passErr != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
