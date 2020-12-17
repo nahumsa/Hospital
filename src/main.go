@@ -9,17 +9,18 @@ import (
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	// Set up context
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
-
 	r := setupRouter()
-	r.POST("/signup", signup)
 	r.Run()
 }
 
@@ -39,19 +40,32 @@ func signup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
 		return
 	}
+	user := User{Username: username, Password: password}
 
-	// Post to a database
-	user := User{User: username, Password: password}
+	user.Password = hashPassword([]byte(user.Password))
 
-	collection := client.Database("GODB").Collection("user")
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	result, err := collection.InsertOne(ctx, user)
+	collection := client.Database("loginDB").Collection("user")
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// catch if there already exists an user
+	var userDB User
+	err := collection.FindOne(ctx, bson.M{"user": user.Username}).Decode(&userDB)
+	emptyUser := User{}
+	if userDB != emptyUser {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username already in use"})
+		return
+	}
+
+	// Add the user to the database
+	_, err = collection.InsertOne(ctx, user)
 	if err != nil {
 		// Need to rework error name
-		c.JSON(http.StatusOK, gin.H{"error": "Signup Error"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Signup Error"})
+		return
 	}
-	log.Println(result)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Signup Complete"})
 
 }
@@ -60,10 +74,18 @@ func signup(c *gin.Context) {
 // user and password are used in order to login, and Firstname and LastName will
 // be used in order to keep logs on the recordings
 type User struct {
-	// FirstName string `json:"firstname" bson:"firstname"`
-	// LastName  string `json:"lastname" bson:"lastname"`
-	User     string `json:"user" bson:"user"`
-	Password string `json:"email" bson:"email"`
+	Username string `json:"username" bson:"username"`
+	Password string `json:"password" bson:"password"`
+}
+
+// getHash create a hash for the password in order to keep the hash in the
+// database.
+func hashPassword(password []byte) string {
+	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.MinCost)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(hash)
 }
 
 var client *mongo.Client
@@ -81,6 +103,8 @@ func setupRouter() *gin.Engine {
 	router.Use(sessions.Sessions("mysession", store))
 	router.POST("/login", Login)
 	router.GET("/logout", Logout)
+	// Signup handler
+	router.POST("/signup", signup)
 
 	// Create private handlers
 	private := router.Group("/private")
@@ -183,14 +207,6 @@ func render(c *gin.Context, data gin.H, templateName string) {
 
 }
 
-// getHash create a hash for the password in order to keep the hash in the
-// database.
-// func getHash(password []byte) string {
-// 	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.MinCost)
-// 	must(err)
-// 	return string(hash)
-// }
-
 // var secretKey = []byte("secrets")
 
 // GenerateJWT generates the JWT string for authentication
@@ -203,9 +219,5 @@ func render(c *gin.Context, data gin.H, templateName string) {
 // 	}
 
 // 	return tokenString, nil
-
-// }
-
-// func postSignUp(c *gin.Context) {
 
 // }

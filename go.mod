@@ -10,6 +10,6 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/stretchr/testify v1.6.1
 	go.mongodb.org/mongo-driver v1.4.4
-	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c // indirect
+	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
 	gotest.tools/gotestsum v0.6.0 // indirect
 )

@@ -11,6 +11,18 @@
     <br>
     <input type="submit" value="Submit" />
 </form>
+<br> <br>
+
+<h3>Signup</h3> 
+<form action="/signup" method="POST" enctype="application/x-www-form-urlencoded">
+    <input type="text" name="username" value="sidthesloth"/>
+    <br>
+    <input type="text" name="password" value="slothsecret"/>
+    <br>
+    <input type="text" name="secretkey" value="key"/>
+    <br>
+    <input type="submit" value="Submit" />
+</form>
 
 <!--Embed the footer.html template at this location-->
 {{ template "footer.html" .}}
