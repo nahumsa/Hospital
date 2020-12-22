@@ -1,21 +1,41 @@
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/appleboy/gofight/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
+	// Set up context
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create mongodb connection
+	port := "27017"
+	url := "mongodb://localhost:" + port
+	client, _ := mongo.Connect(ctx, options.Client().ApplyURI(url))
+	_ = client
 }
 
 func TestHomepage(t *testing.T) {
 	t.Run("HomepageStatus", HomepageStatus)
+}
+
+func TestSignUp(t *testing.T) {
+	t.Run("SignUpSuccessful", SignUpSuccessful)
+	t.Run("SignUpNoKey", SignUpNoKey)
+	t.Run("SignUpUsername Already in Use", SignUpUsernameUse)
+	t.Run("SignUpNoForm", SignUpNoForm)
 }
 
 func TestLogin(t *testing.T) {
@@ -83,6 +103,70 @@ func PrivateNoAuth(t *testing.T) {
 		body, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, wantBody, string(body))
 	})
+}
+
+func SignUpSuccessful(t *testing.T) {
+	g := gofight.New()
+	e := setupRouter()
+
+	wantBody := `{"message": "Signup Complete"}`
+	wantStatus := http.StatusOK
+
+	g.POST("/signup").
+		SetForm(gofight.H{"username": "user1", "password": "test", "secretkey": "secret"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
+}
+
+func SignUpNoKey(t *testing.T) {
+	g := gofight.New()
+	e := setupRouter()
+
+	wantBody := `{"error":"Invalid Secret Key"}`
+	wantStatus := http.StatusBadRequest
+
+	g.POST("/signup").
+		SetForm(gofight.H{"username": "user1", "password": "test", "secretkey": ""}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
+}
+
+func SignUpUsernameUse(t *testing.T) {
+	g := gofight.New()
+	e := setupRouter()
+
+	wantBody := `{"error":"username already in use"}`
+	wantStatus := http.StatusBadRequest
+
+	g.POST("/signup").
+		SetForm(gofight.H{"username": "user1", "password": "test", "secretkey": "secret"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
+}
+
+func SignUpNoForm(t *testing.T) {
+	g := gofight.New()
+	e := setupRouter()
+
+	wantBody := `{"error":"username already in use"}`
+	wantStatus := http.StatusBadRequest
+
+	g.POST("/signup").
+		SetForm(gofight.H{"username": "", "password": "", "secretkey": "secret"}).
+		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, wantStatus, r.Code)
+			body, _ := ioutil.ReadAll(r.Body)
+			assert.Equal(t, wantBody, string(body))
+		})
 }
 
 func LoginSuccessful(t *testing.T) {

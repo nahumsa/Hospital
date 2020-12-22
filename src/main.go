@@ -19,7 +19,13 @@ func main() {
 	// Set up context
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+
+	// Create mongodb connection
+	port := "27017"
+	url := "mongodb://localhost:" + port
+	client, _ = mongo.Connect(ctx, options.Client().ApplyURI(url))
+
+	// Setup router
 	r := setupRouter()
 	r.Run()
 }
