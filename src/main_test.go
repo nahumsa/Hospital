@@ -9,22 +9,13 @@ import (
 
 	"github.com/appleboy/gofight/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/nahumsa/hospital-management/src/db"
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
-	// Set up context
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Create mongodb connection
-	port := "27017"
-	url := "mongodb://localhost:" + port
-	client, _ := mongo.Connect(ctx, options.Client().ApplyURI(url))
-	_ = client
 }
 
 func TestHomepage(t *testing.T) {
@@ -72,7 +63,7 @@ func PrivateTestAuth(t *testing.T) {
 	g := gofight.New()
 	e := setupRouter()
 	wantStatus := http.StatusOK
-	wantBody := `{"user":"1"}`
+	wantBody := `{"user":"user1"}`
 
 	var cookie string
 	g.POST("/login").
@@ -109,8 +100,20 @@ func SignUpSuccessful(t *testing.T) {
 	g := gofight.New()
 	e := setupRouter()
 
-	wantBody := `{"message": "Signup Complete"}`
+	wantBody := `{"message":"Signup Complete"}`
 	wantStatus := http.StatusOK
+
+	// Create mongodb connection
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	port := "27017"
+	url := "mongodb://localhost:" + port
+	client, _ := db.Connect(ctx, url)
+	collection := client.Client.Database("loginDB").Collection("user")
+
+	// Delete the user if it exists
+	_, _ = collection.DeleteOne(ctx, bson.M{"username": "user1"})
 
 	g.POST("/signup").
 		SetForm(gofight.H{"username": "user1", "password": "test", "secretkey": "secret"}).
@@ -157,7 +160,7 @@ func SignUpNoForm(t *testing.T) {
 	g := gofight.New()
 	e := setupRouter()
 
-	wantBody := `{"error":"username already in use"}`
+	wantBody := `{"error":"Parameters can't be empty"}`
 	wantStatus := http.StatusBadRequest
 
 	g.POST("/signup").
