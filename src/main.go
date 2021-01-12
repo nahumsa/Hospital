@@ -8,8 +8,6 @@ import (
 	"github.com/nahumsa/hospital-management/src/routes"
 )
 
-// var client *mongo.Client
-
 func main() {
 	// Setup router
 	r := setupRouter()

@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  api:
+    container_name: 'hospital-compose'
+    build: .
+    ports:
+      - '8080:8080'
+    volumes:
+      - '/hospital'
+    depends_on:
+      - 'mongodb'
+
+  mongodb:
+    image: 'mongo:latest'
+    container_name: 'mongodb'
+    volumes:
+      - './dockervolume/mongodb:/data/db'
