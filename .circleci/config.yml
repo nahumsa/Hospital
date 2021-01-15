@@ -13,7 +13,7 @@ jobs:
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 
-    working_directory: /go/src/github.com/nahumsa/MathApp-Docker
+    working_directory: /go/src/github.com/nahumsa/hospital-management
     steps:
       - checkout
 

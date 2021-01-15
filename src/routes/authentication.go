@@ -14,6 +14,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// const (
+// 	port = "27017"
+// 	url  = "mongodb://localhost:" + port
+// )
+
 // Login generates a login validation Handler
 func Login(c *gin.Context) {
 	session := sessions.Default(c)
@@ -33,7 +38,7 @@ func Login(c *gin.Context) {
 
 	// Create mongodb connection
 	port := "27017"
-	url := "mongodb://localhost:" + port
+	url := "mongodb://127.0.0.1:" + port + "/"
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
 
@@ -136,9 +141,6 @@ func Signup(c *gin.Context) {
 	url := "mongodb://localhost:" + port
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
-
-	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	// defer cancel()
 
 	// catch if there already exists an user
 	var userDB User
