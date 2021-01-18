@@ -14,11 +14,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// const (
-// 	port = "27017"
-// 	url  = "mongodb://localhost:" + port
-// )
-
 // Login generates a login validation Handler
 func Login(c *gin.Context) {
 	session := sessions.Default(c)

@@ -2,11 +2,17 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/nahumsa/hospital-management/src/routes"
 )
+
+func init() {
+	godotenv.Load()
+}
 
 func main() {
 	// Setup router
@@ -39,9 +45,13 @@ func setupRouter() *gin.Engine {
 	return router
 }
 
-var userKey = "user"
+// var userKey = os.Getenv("userKey")
 
 func userGet(c *gin.Context) {
+	// Parameters
+	userKey := os.Getenv("userKey")
+
+	// get the user
 	session := sessions.Default(c)
 	user := session.Get(userKey)
 	c.JSON(http.StatusOK, gin.H{"user": user})
