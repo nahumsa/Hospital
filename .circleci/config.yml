@@ -13,6 +13,8 @@ jobs:
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
       userKey: 'user'
+      mongoURL: 'mongodb://127.0.0.1:'
+      mongoPort: '27017'
       
 
     working_directory: /go/src/github.com/nahumsa/hospital-management

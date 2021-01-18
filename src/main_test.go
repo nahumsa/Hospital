@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -107,8 +108,10 @@ func SignUpSuccessful(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	port := "27017"
-	url := "mongodb://localhost:" + port
+	// port := "27017"
+	// url := "mongodb://localhost:" + port
+	port := os.Getenv("mongoPort")
+	url := os.Getenv("mongoURL") + port + "/"
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
 

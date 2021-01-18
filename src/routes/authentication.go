@@ -4,15 +4,21 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/nahumsa/hospital-management/src/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func init() {
+	godotenv.Load()
+}
 
 // Login generates a login validation Handler
 func Login(c *gin.Context) {
@@ -32,8 +38,10 @@ func Login(c *gin.Context) {
 	defer cancel()
 
 	// Create mongodb connection
-	port := "27017"
-	url := "mongodb://127.0.0.1:" + port + "/"
+	// port := "27017"
+	// url := "mongodb://127.0.0.1:" + port + "/"
+	port := os.Getenv("mongoPort")
+	url := os.Getenv("mongoURL") + port + "/"
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
 
@@ -132,8 +140,10 @@ func Signup(c *gin.Context) {
 	defer cancel()
 
 	// Create mongodb connection
-	port := "27017"
-	url := "mongodb://localhost:" + port
+	// port := "27017"
+	// url := "mongodb://localhost:" + port
+	port := os.Getenv("mongoPort")
+	url := os.Getenv("mongoURL") + port + "/"
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
 
