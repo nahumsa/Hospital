@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -17,12 +19,11 @@ func init() {
 func main() {
 	// Setup router
 	r := setupRouter()
-	r.Run()
+	r.Run(":8000")
 }
 
 // setupRouter creates the routing of the API, using Gin Gonic.
 func setupRouter() *gin.Engine {
-	// gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.LoadHTMLGlob("views/*")
 	router.GET("/", routes.GetHomepage)
@@ -40,12 +41,12 @@ func setupRouter() *gin.Engine {
 	private.Use(routes.AuthRequired)
 	{
 		private.GET("/user", userGet)
+		private.GET("/log", routes.GetLog)
+		private.POST("/addlog", routes.AddLog)
 	}
 
 	return router
 }
-
-// var userKey = os.Getenv("userKey")
 
 func userGet(c *gin.Context) {
 	// Parameters
@@ -54,6 +55,7 @@ func userGet(c *gin.Context) {
 	// get the user
 	session := sessions.Default(c)
 	user := session.Get(userKey)
+	log.Println(reflect.TypeOf(user))
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 

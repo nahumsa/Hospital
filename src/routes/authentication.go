@@ -97,12 +97,12 @@ func Logout(c *gin.Context) {
 
 // GetHomepage initialize the homepage HTML.
 func GetHomepage(c *gin.Context) {
-	render(c, gin.H{"title": "login"}, "homepage.html")
+	Render(c, gin.H{"title": "login"}, "homepage.html")
 }
 
-// render helper function to render JSON, XML and HTML depending on
+// Render helper function to render JSON, XML and HTML depending on
 // the request.
-func render(c *gin.Context, data gin.H, templateName string) {
+func Render(c *gin.Context, data gin.H, templateName string) {
 
 	switch c.Request.Header.Get("Accept") {
 	case "application/json":
@@ -140,10 +140,8 @@ func Signup(c *gin.Context) {
 	defer cancel()
 
 	// Create mongodb connection
-	// port := "27017"
-	// url := "mongodb://localhost:" + port
-	port := os.Getenv("mongoPort")
-	url := os.Getenv("mongoURL") + port + "/"
+	url := os.Getenv("mongoURL") + os.Getenv("mongoPort") + "/"
+
 	client, _ := db.Connect(ctx, url)
 	collection := client.Client.Database("loginDB").Collection("user")
 

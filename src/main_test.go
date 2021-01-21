@@ -259,3 +259,26 @@ func LogoutNoUser(t *testing.T) {
 		assert.Equal(t, wantBody, string(body))
 	})
 }
+
+// func PostLogAccepted(t *testing.T) {
+// 	g := gofight.New()
+// 	e := setupRouter()
+// 	wantStatus := http.StatusOK
+// 	wantBody := `{"message":"Log added"}`
+
+// 	var cookie string
+// 	g.POST("/login").
+// 		SetForm(gofight.H{"username": "user1", "password": "test"}).
+// 		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+// 			assert.Equal(t, http.StatusOK, r.Code)
+// 			cookie = r.HeaderMap.Get("Set-Cookie")
+// 			// Check if there is a cookie
+// 			assert.NotZero(t, cookie)
+// 		})
+
+// 	g.GET("/private/user").SetHeader(gofight.H{"Cookie": cookie}).Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+// 		assert.Equal(t, wantStatus, r.Code)
+// 		body, _ := ioutil.ReadAll(r.Body)
+// 		assert.Equal(t, wantBody, string(body))
+// 	})
+// }

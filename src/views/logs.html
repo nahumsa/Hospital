@@ -1,0 +1,16 @@
+<!-- views/homepage.html -->
+
+<!--Embed the header.html template at this location-->
+{{ template "header.html" .}}
+
+<h3>Fill Form</h3> 
+<form action="/private/addlog" method="POST" enctype="application/x-www-form-urlencoded">
+    <input type="text" name="cid" value="CID-10"/>
+    <br>
+    <input type="text" name="room" value="Room"/>
+    <br>
+    <input type="submit" value="Submit" />
+</form>
+
+<!--Embed the footer.html template at this location-->
+{{ template "footer.html" .}}
