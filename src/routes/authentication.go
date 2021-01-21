@@ -163,8 +163,7 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Signup Complete"})
-
+	c.Redirect(http.StatusFound, "/")
 }
 
 // AuthRequired is a middleware to check the session

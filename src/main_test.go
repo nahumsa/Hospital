@@ -101,15 +101,12 @@ func SignUpSuccessful(t *testing.T) {
 	g := gofight.New()
 	e := setupRouter()
 
-	wantBody := `{"message":"Signup Complete"}`
-	wantStatus := http.StatusOK
+	wantStatus := http.StatusFound
 
 	// Create mongodb connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// port := "27017"
-	// url := "mongodb://localhost:" + port
 	port := os.Getenv("mongoPort")
 	url := os.Getenv("mongoURL") + port + "/"
 	client, _ := db.Connect(ctx, url)
@@ -122,8 +119,6 @@ func SignUpSuccessful(t *testing.T) {
 		SetForm(gofight.H{"username": "user1", "password": "test", "secretkey": "secret"}).
 		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 			assert.Equal(t, wantStatus, r.Code)
-			body, _ := ioutil.ReadAll(r.Body)
-			assert.Equal(t, wantBody, string(body))
 		})
 }
 

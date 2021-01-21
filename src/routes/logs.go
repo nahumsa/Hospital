@@ -70,7 +70,7 @@ func AddLog(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/foo")
+	c.Redirect(http.StatusFound, "/private/log")
 	// c.JSON(http.StatusOK, gin.H{"message": "Log added"})
 }
 
