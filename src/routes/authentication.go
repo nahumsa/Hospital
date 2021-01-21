@@ -38,8 +38,6 @@ func Login(c *gin.Context) {
 	defer cancel()
 
 	// Create mongodb connection
-	// port := "27017"
-	// url := "mongodb://127.0.0.1:" + port + "/"
 	port := os.Getenv("mongoPort")
 	url := os.Getenv("mongoURL") + port + "/"
 	client, _ := db.Connect(ctx, url)
@@ -73,7 +71,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Authentication Successful"})
+	c.Redirect(http.StatusFound, "/private/log")
+	// c.JSON(http.StatusOK, gin.H{"message": "Authentication Successful"})
 }
 
 // Logout generates a handler that logouts current session
@@ -92,7 +91,7 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+	c.Redirect(http.StatusFound, "/")
 }
 
 // GetHomepage initialize the homepage HTML.

@@ -70,7 +70,7 @@ func PrivateTestAuth(t *testing.T) {
 	g.POST("/login").
 		SetForm(gofight.H{"username": "user1", "password": "test"}).
 		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
-			assert.Equal(t, http.StatusOK, r.Code)
+			assert.Equal(t, http.StatusFound, r.Code)
 			cookie = r.HeaderMap.Get("Set-Cookie")
 			// Check if there is a cookie
 			assert.NotZero(t, cookie)
@@ -174,15 +174,14 @@ func LoginSuccessful(t *testing.T) {
 	g := gofight.New()
 	e := setupRouter()
 
-	wantBody := `{"message":"Authentication Successful"}`
-	wantStatus := http.StatusOK
+	wantStatus := http.StatusFound
 
 	g.POST("/login").
 		SetForm(gofight.H{"username": "user1", "password": "test"}).
 		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 			assert.Equal(t, wantStatus, r.Code)
-			body, _ := ioutil.ReadAll(r.Body)
-			assert.Equal(t, wantBody, string(body))
+			// body, _ := ioutil.ReadAll(r.Body)
+			// assert.Equal(t, wantBody, string(body))
 		})
 }
 
@@ -221,14 +220,13 @@ func LogoutUser(t *testing.T) {
 	// Function adapted from https://github.com/Depado/gin-auth-example/blob/master/main_test.go
 	g := gofight.New()
 	e := setupRouter()
-	wantStatus := http.StatusOK
-	wantBody := `{"message":"Successfully logged out"}`
+	wantStatus := http.StatusFound
 
 	var cookie string
 	g.POST("/login").
 		SetForm(gofight.H{"username": "user1", "password": "test"}).
 		Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
-			assert.Equal(t, http.StatusOK, r.Code)
+			assert.Equal(t, http.StatusFound, r.Code)
 			cookie = r.HeaderMap.Get("Set-Cookie")
 			// Check if there is a cookie
 			assert.NotZero(t, cookie)
@@ -236,8 +234,6 @@ func LogoutUser(t *testing.T) {
 
 	g.GET("/logout").SetHeader(gofight.H{"Cookie": cookie}).Run(e, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
 		assert.Equal(t, wantStatus, r.Code)
-		body, _ := ioutil.ReadAll(r.Body)
-		assert.Equal(t, wantBody, string(body))
 	})
 }
 
